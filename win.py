@@ -1,137 +1,142 @@
 # -*- coding: utf-8 -*-
-import pygtk, gtk
-pygtk.require('2.0')
-import time, pango
+#!/usr/bin/python3
+import gi, sys
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, Gdk, GdkPixbuf, Pango
+import time, cairo
 
 
-class MyWindow(gtk.Window):
+
+class MyWindow(Gtk.Window):
 
 	def __init__(self):
-		super(MyWindow, self).__init__()
-		
-		win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-		win.set_position(gtk.WIN_POS_CENTER)
-		win.set_size_request(560,315)
-		win.set_title("User Information")
-		win.connect("destroy", self.close)
-		
-		#draw area
-		self.area = gtk.DrawingArea()
-		self.area.set_size_request(560, 315)
-		self.area.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#aeebff'))
+		Gtk.Window.__init__(self, title="User Information")
+		self.set_name('MyWindow')
+		self.set_default_size(560, 315)
 
-		#label
-		self.pangolayout = self.area.create_pango_layout("")
+
+		overlay = Gtk.Overlay.new()
 	
-		fixed = gtk.Fixed()
-		fixed.put(self.area, 0, 0)
-		win.add(fixed)
-		self.area.connect("expose-event", self.area_expose_bg)	
-		self.area.connect("expose-event", self.area_upper)
-		self.area.connect("expose-event", self.area_lower)
-		self.area.connect("expose-event", self.logo)
-		self.area.show()		
+		#Gtk Overlay
+		#drawing area
+		area = Gtk.DrawingArea()
+		area.set_size_request(560, 315)
+		area.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse('#aeebff'))
 
-		win.show_all()
+		area.connect('draw', self.draw_bg)
+		area.connect('draw', self.area_upper)
+		area.connect('draw', self.area_lower)
+		area.connect('draw', self.logo)
+		overlay.add(area)
 
-	#components that will be shown on the window
-	def area_expose_bg(self, area, event):
-		w, h = area.window.get_size()
-		self.gc = area.window.new_gc()	
+
+		#label/left window
+		label1 = Gtk.Label('name')
+		label1.set_alignment(62/560.0, 112/315.0)
+		label1.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse('#000000'))
+		label1.modify_font(Pango.FontDescription("Granada 11"))
+		overlay.add_overlay(label1)
 		
-		#background		
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#C4f3ff'))
-		self.area.window.draw_rectangle(self.gc, True, 20, 20, 520, 275)
+
+		label2 = Gtk.Label('info')
+		label2.set_alignment(62/560.0, 192/315.0)
+		label2.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse('#000000'))
+		label2.modify_font(Pango.FontDescription("Granada 11"))
+		overlay.add_overlay(label2)
+
+		#label/right window
+		now = time.strftime('%Y/%m/%d %H:%M:%S')
+		items = ['sid', 'cid', now, 'location', 'contact']
+		y = 75
+		for i in range(5):
+			locals()["group"+str(i+3)] = Gtk.Label(items[i])
+			locals()["group"+str(i+3)].set_alignment(500/560.0, y/315.0)
+			locals()["group"+str(i+3)].modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse('#000000'))
+			locals()["group"+str(i+3)].modify_font(Pango.FontDescription("Granada 11"))
+			y += 43
+			overlay.add_overlay(locals()["group"+str(i+3)])
+		self.add(overlay)
+		self.show_all()
+	
+	#system background
+	def draw_bg(self, area, cr):
+		#background rectangles
+		cr.set_source_rgb(0.7686, 0.9529, 1.0)
+		cr.rectangle(20, 20, 520, 275) #x0 y0 x1 y1
+		cr.fill()		
 		
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#E7faff'))
-		self.area.window.draw_rectangle(self.gc, True, 25, 15, 510, 285)
+		cr.set_source_rgb(0.9059, 0.9804, 1.0)
+		cr.rectangle(25, 15, 510, 285)
+		cr.fill()	
 
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#FFFFFF'))
-		self.area.window.draw_rectangle(self.gc, True, 33, 10, 494, 295)
+		cr.set_source_rgb(1.0, 1.0, 1.0)
+		cr.rectangle(33, 10, 494, 295)
+		cr.fill()
 		
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#e1e3e4'))
-		self.area.window.draw_line(self.gc, 335, 60, 335, 305)
-
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#e1e3e4'))
-		self.area.window.draw_line(self.gc, 35, 60, 525, 60)
-		return 
-
-	def area_upper(self, area, event):
-
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#13427a'))
-		self.pangolayout.set_font_description (pango.FontDescription("KacstDigital 22"))
-		self.pangolayout.set_text("樂   學   網")
-		self.area.window.draw_layout(self.gc, 210, 12, self.pangolayout)
+		#line
+		#set_line_width
+		cr.set_source_rgb(0.8824, 0.8902, 0.8941)	
+		cr.set_line_width(1)
+		cr.move_to (335, 60) # Line to (x,y)
+		cr.line_to (335, 305) # Line to (x,y)
+		
+		cr.move_to (35, 60) # Line to (x,y)
+		cr.line_to (525, 60) # Line to (x,y)
+		cr.stroke()
 		return
-	
-	def area_lower(self, area, event):	
-		#lower left window(name, other info)
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#131313'))
-		self.pangolayout.set_font_description (pango.FontDescription("KacstDigital 12"))
-		self.pangolayout.set_text("姓名: ")
-		self.area.window.draw_layout(self.gc, 88, 70, self.pangolayout)	
 
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#131313'))
-		self.pangolayout.set_text("課程資訊: ")
-		self.area.window.draw_layout(self.gc, 88, 145, self.pangolayout)
+	def area_upper(self, area, cr):
+		cr.set_source_rgb(0.0745, 0.2588, 0.4784)
+		#cr.select_font_face('KacstDigital', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)	
+		cr.set_font_size(30)
+		cr.move_to(205, 50)		
+		cr.show_text("樂   學   網")
+		return	
+	
+	def area_lower(self, area, cr):
+		#lower left window(name, other info)
+		cr.set_source_rgb(0.0745, 0.0745, 0.0745)
+		#cr.select_font_face('KacstDigital', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)	
+		cr.set_font_size(16)
+		cr.move_to(88, 90)		
+		cr.show_text("姓名: ")
+
+		cr.move_to(88, 165)		
+		cr.show_text("課程資訊: ")		
 
 		#area for name input
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#e1e3e4'))
-		self.area.window.draw_rectangle(self.gc, True, 50, 102, 200, 28)
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#131313'))
-		self.pangolayout.set_font_description (pango.FontDescription("KacstDigital 10"))
-		self.pangolayout.set_text("aaa")
-		self.area.window.draw_layout(self.gc, 60, 105, self.pangolayout)	
+		cr.set_source_rgba(0.8824, 0.8902, 0.8941)
+		cr.rectangle(50, 102, 200, 28)
+		cr.fill()	
 		
 		#area for other info input
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#e1e3e4'))
-		self.area.window.draw_rectangle(self.gc, True, 50, 176, 270, 110)
-		self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#131313'))
-		self.pangolayout.set_text("aaa")
-		self.area.window.draw_layout(self.gc, 60, 181, self.pangolayout)
+		cr.set_source_rgba(0.8824, 0.8902, 0.8941)
+		cr.rectangle(50, 176, 270, 110)
+		cr.fill()
 
 		#lower right window
-		#sid = student ID, cid = card ID
-		sid = '學號'
-		cid = '卡號'
-		now = time.strftime('%Y/%m/%d %H:%M:%S')
-		location = '場館'
-		contact = '聯絡方式'
-		items = [sid, cid, now, location, contact]
 		yarea = 61
-		ycontent = 70
-		for i in range(len(items)):
+		for i in range(5):
 			if i%2 == 0:
-				self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#e1e3e4'))
+				cr.set_source_rgba(0.8824, 0.8902, 0.8941)				
 			else:
-				self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#FFFFFF'))
-			
-			self.area.window.draw_rectangle(self.gc, True, 336, yarea, 190, 40)
-			self.gc.set_rgb_fg_color(gtk.gdk.color_parse('#131313'))
-			self.pangolayout.set_font_description (pango.FontDescription("KacstDigital 11"))			
-			self.pangolayout.set_text(items[i])
-			self.area.window.draw_layout(self.gc, 380, ycontent, self.pangolayout)	
-			yarea += 40			
-			ycontent += 40	
+				cr.set_source_rgba(1.0, 1.0, 1.0)
 
-		self.pangolayout.set_font_description (pango.FontDescription("KacstDigital 8"))
-		self.pangolayout.set_text("(for any issue)")
-		self.area.window.draw_layout(self.gc, 455, 245, self.pangolayout)	
+			cr.rectangle(336, yarea, 190, 40)
+			cr.fill()			
+			yarea += 40		
+		return	
 
-		return
-	
-	def logo(self, area, event):	
+	def logo(self, area, cr):	
 		#keelung education center logo
-		img = gtk.gdk.pixbuf_new_from_file_at_size("icon/edu.jpg", 130, 140)
-		self.image = gtk.gdk.Pixmap(area.window, img.get_width(), img.get_height())
-		self.image.draw_pixbuf(self.gc, img, 0, 0, 0, 0)
-		self.area.window.draw_drawable(self.gc, self.image, 0, 0, 340, 270, *self.image.get_size())
-
+		img = GdkPixbuf.Pixbuf.new_from_file_at_size("icon/edu.jpg", 130, 140)
+		Gdk.cairo_set_source_pixbuf(cr, img, 340, 270)		
+		cr.paint()
+		
 		#NCHC logo
-		img = gtk.gdk.pixbuf_new_from_file_at_size("icon/nchc.jpg", 55, 50)
-		self.image = gtk.gdk.Pixmap(area.window, img.get_width(), img.get_height())
-		self.image.draw_pixbuf(self.gc, img, 0, 0, 0, 0)
-		self.area.window.draw_drawable(self.gc, self.image, 0, 0, 470, 262, *self.image.get_size())
+		img = GdkPixbuf.Pixbuf.new_from_file_at_size("icon/nchc.jpg", 55, 50)
+		Gdk.cairo_set_source_pixbuf(cr, img, 470, 262)		
+		cr.paint()
 
 		#sid, cid, time, location, contact icon
 		icons = ['icon/sid.png', 'icon/cid.png', 'icon/time.png', 'icon/location.png', 'icon/contact.png', 'icon/name.png', 'icon/note.png']
@@ -139,30 +144,24 @@ class MyWindow(gtk.Window):
 		yLeft = 65 #left window
 		yRight = 65 #right window
 		for i in range(len(icons)):
-			img = gtk.gdk.pixbuf_new_from_file_at_size(icons[i], 31, 31)
-			self.image = gtk.gdk.Pixmap(area.window, img.get_width(), img.get_height())
-			self.image.draw_pixbuf(self.gc, img, 0, 0, 0, 0)
+			img = GdkPixbuf.Pixbuf.new_from_file_at_size(icons[i], 31, 31)
 			if i < 5: 
-
-				self.area.window.draw_drawable(self.gc, self.image, 0, 0, 340, yRight, *self.image.get_size())
+				Gdk.cairo_set_source_pixbuf(cr, img, 340, yRight)		
+				cr.paint()
 				yRight += 40
 			else:
-				
-				self.area.window.draw_drawable(self.gc, self.image, 0, 0, 50, yLeft, *self.image.get_size())
+				Gdk.cairo_set_source_pixbuf(cr, img, 50, yLeft)		
+				cr.paint()				
 				yLeft += 75
 		return
+
 	
+def main(argv):
 
-	#close the application
-	def close(self, widget, data=None):
-		gtk.main_quit()
-		
-
-	def main(self):
-		gtk.main()
+    win = MyWindow()
+    win.connect("delete-event", Gtk.main_quit)
+    win.show_all()
+    Gtk.main()
 
 if __name__ == "__main__":
-
-   	win = MyWindow() #run class MyWindow 
-	win.main()
-
+    main(sys.argv)
